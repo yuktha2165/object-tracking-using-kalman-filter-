@@ -62,23 +62,34 @@ def associate_detections_to_tracks(
     # 5. Class consistency penalty
     track_classes = [t.class_name for t in tracks]
     det_classes = [d['class_name'] for d in detections]
+    FOUR_WHEELERS = {"car", "truck", "bus"}
     for i, t_cls in enumerate(track_classes):
         for j, d_cls in enumerate(det_classes):
             if t_cls != d_cls:
-                cost_matrix[i, j] += 35.0 # Mismatch penalty
+                if t_cls in FOUR_WHEELERS and d_cls in FOUR_WHEELERS:
+                    cost_matrix[i, j] += 10.0 # Soft mismatch penalty for 4-wheelers to allow truck/bus class refinement
+                else:
+                    cost_matrix[i, j] += 35.0 # Strict mismatch penalty between 2-wheelers and 4-wheelers
 
-    # 6. Run Hungarian Algorithm
-    row_ind, col_ind = linear_sum_assignment(cost_matrix)
+    # 6. Apply Distance Gating BEFORE calling Hungarian algorithm
+    HIGH_SENTINEL = 1e6
+    gated_cost_matrix = cost_matrix.copy()
+    gated_cost_matrix[dist_matrix > max_distance] = HIGH_SENTINEL
+
+    # 7. Run Hungarian Algorithm (linear_sum_assignment)
+    row_ind, col_ind = linear_sum_assignment(gated_cost_matrix)
 
     matches = []
     unmatched_tracks = set(range(len(tracks)))
     unmatched_detections = set(range(len(detections)))
 
     for r, c in zip(row_ind, col_ind):
-        if dist_matrix[r, c] <= max_distance or iou_matrix[r, c] > 0.2:
-            matches.append((r, c))
-            unmatched_tracks.discard(r)
-            unmatched_detections.discard(c)
+        # Reject matches that exceed sentinel cost or exceed maximum association distance
+        if gated_cost_matrix[r, c] >= 1e5 or dist_matrix[r, c] > max_distance:
+            continue
+        matches.append((r, c))
+        unmatched_tracks.discard(r)
+        unmatched_detections.discard(c)
 
     return matches, list(unmatched_tracks), list(unmatched_detections)
 

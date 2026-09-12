@@ -60,7 +60,9 @@ class MultiObjectTracker:
         # Step 5: Handle unmatched detections (create new tracks)
         for det_idx in unmatched_detections_idx:
             det = detections[det_idx]
-            if det['confidence'] >= self.confidence_threshold:
+            cls = det.get('class_name', '').lower()
+            min_conf = max(0.20, self.confidence_threshold - 0.15) if cls in ["truck", "bus"] else self.confidence_threshold
+            if det['confidence'] >= min_conf:
                 new_track = Track(
                     class_name=det['class_name'],
                     bbox=det['bbox'],
@@ -70,8 +72,11 @@ class MultiObjectTracker:
                 )
                 self.tracks.append(new_track)
 
-        # Return list of currently valid active tracks
-        return [t for t in self.tracks if t.status not in ["REMOVED", "DELETED"]]
+        # Purge inactive/removed tracks
+        self.tracks = [t for t in self.tracks if t.status not in ["REMOVED", "DELETED"]]
+
+        # Return list of currently active tracks
+        return self.tracks
 
     def propagate_skipped_frame(self, frame_idx: int) -> List[Track]:
         """Propagate state for active tracks on skipped frame without running object detector."""

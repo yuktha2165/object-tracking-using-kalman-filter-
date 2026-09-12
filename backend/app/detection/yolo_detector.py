@@ -19,11 +19,11 @@ VEHICLE_CLASS_MAP = {
 
 # Adaptive class confidence thresholds for optimal accuracy
 CLASS_CONFIDENCE_OFFSETS = {
-    "bicycle": -0.05,    # Slightly lower for small vehicle features
-    "motorcycle": -0.05,
+    "bicycle": -0.10,
+    "motorcycle": -0.10,
     "car": 0.0,
-    "bus": 0.0,
-    "truck": 0.0
+    "bus": -0.15,
+    "truck": -0.15
 }
 
 class YOLODetector:
@@ -86,6 +86,8 @@ class YOLODetector:
             target_vehicles = ["car", "bus", "truck", "motorcycle", "bicycle", "motorbike", "vehicle"]
             for cid, name in self.model.names.items():
                 name_lower = str(name).lower()
+                if name_lower in ["carrot", "cardboard"]:
+                    continue
                 for target in target_vehicles:
                     if target in name_lower:
                         norm_name = "motorcycle" if "bike" in name_lower else ("car" if target == "vehicle" else name_lower)
@@ -113,9 +115,48 @@ class YOLODetector:
         y2 = max(y1 + 1, min(h, int(roi.get("y2", h))))
         return frame[y1:y2, x1:x2], x1, y1
 
+    def _suppress_duplicate_detections(self, detections: List[Dict[str, Any]], iou_thresh: float = 0.45) -> List[Dict[str, Any]]:
+        """Class-agnostic NMS to filter out duplicate/overlapping bounding boxes on the same physical object."""
+        if len(detections) <= 1:
+            return detections
+
+        # When vehicle boxes overlap heavily (e.g. car and truck on same physical vehicle),
+        # prioritize specialized vehicle classes (truck, bus, motorcycle) over generic "car".
+        def priority_score(det):
+            cls = det["class_name"].lower()
+            bonus = 0.25 if cls in ["truck", "bus"] else (0.10 if cls in ["motorcycle", "bicycle"] else 0.0)
+            return det["confidence"] + bonus
+
+        sorted_dets = sorted(detections, key=priority_score, reverse=True)
+        keep = []
+
+        for det in sorted_dets:
+            box_a = det["bbox"]
+            overlap = False
+            for k in keep:
+                box_b = k["bbox"]
+                inter_x1 = max(box_a[0], box_b[0])
+                inter_y1 = max(box_a[1], box_b[1])
+                inter_x2 = min(box_a[2], box_b[2])
+                inter_y2 = min(box_a[3], box_b[3])
+
+                inter_area = max(0.0, inter_x2 - inter_x1) * max(0.0, inter_y2 - inter_y1)
+                area_a = max(1.0, (box_a[2] - box_a[0]) * (box_a[3] - box_a[1]))
+                area_b = max(1.0, (box_b[2] - box_b[0]) * (box_b[3] - box_b[1]))
+                union = area_a + area_b - inter_area
+                iou = inter_area / max(union, 1e-6)
+
+                if iou > iou_thresh:
+                    overlap = True
+                    break
+            if not overlap:
+                keep.append(det)
+
+        return keep
+
     def detect(self, frame: np.ndarray, confidence: Optional[float] = None, roi: Optional[Dict[str, int]] = None) -> List[Dict[str, Any]]:
         """
-        Runs accelerated YOLO detection on an OpenCV BGR frame (with optional ROI).
+        Runs accelerated YOLO detection on an OpenCV BGR frame (with optional ROI and class-agnostic NMS).
         """
         if self.model is None:
             return []
@@ -123,29 +164,28 @@ class YOLODetector:
         cropped_frame, offset_x, offset_y = self._apply_roi(frame, roi)
         base_conf = confidence if confidence is not None else self.confidence_threshold
         target_classes = list(self.class_map.keys()) if self.class_map else None
+        predict_conf = max(0.18, min(base_conf, 0.25))
         
+        predict_kwargs = {
+            "source": cropped_frame,
+            "conf": predict_conf,
+            "iou": self.iou_threshold,
+            "classes": target_classes,
+            "imgsz": self.imgsz,
+            "device": self.device,
+            "verbose": False
+        }
+        if hasattr(self.model, "predict"):
+            predict_kwargs["agnostic_nms"] = True
+
         with torch.inference_mode():
             try:
-                results = self.model.predict(
-                    source=cropped_frame,
-                    conf=base_conf * 0.8,
-                    iou=self.iou_threshold,
-                    classes=target_classes,
-                    imgsz=self.imgsz,
-                    device=self.device,
-                    verbose=False
-                )
+                results = self.model.predict(**predict_kwargs)
             except Exception as e:
                 logger.warning(f"Prediction fallback to CPU: {e}")
-                results = self.model.predict(
-                    source=cropped_frame,
-                    conf=base_conf * 0.8,
-                    iou=self.iou_threshold,
-                    classes=target_classes,
-                    imgsz=self.imgsz,
-                    device="cpu",
-                    verbose=False
-                )
+                predict_kwargs["device"] = "cpu"
+                predict_kwargs.pop("agnostic_nms", None)
+                results = self.model.predict(**predict_kwargs)
 
         detections = []
         if len(results) > 0 and results[0].boxes is not None:
@@ -157,13 +197,14 @@ class YOLODetector:
 
                 class_name = self.class_map.get(cls_id, "car")
                 conf_offset = CLASS_CONFIDENCE_OFFSETS.get(class_name, 0.0)
-                effective_thresh = max(0.1, base_conf + conf_offset)
+                effective_thresh = max(0.18, base_conf + conf_offset)
 
                 if conf < effective_thresh:
                     continue
 
+                class_name = self.class_map.get(cls_id, "car")
+
                 x1, y1, x2, y2 = [float(v) for v in xyxy]
-                # Adjust for ROI offset
                 x1 += offset_x
                 x2 += offset_x
                 y1 += offset_y
@@ -179,7 +220,7 @@ class YOLODetector:
                     "centroid": (cx, cy)
                 })
 
-        return detections
+        return self._suppress_duplicate_detections(detections, iou_thresh=self.iou_threshold)
 
     def detect_batch(
         self, 
@@ -189,7 +230,7 @@ class YOLODetector:
     ) -> List[List[Dict[str, Any]]]:
         """
         Runs parallel batch YOLO inference over a list of OpenCV BGR frames.
-        Automatically handles ROI cropping and CUDA/MPS OOM fallback.
+        Automatically handles ROI cropping, class-agnostic NMS, and CUDA/MPS OOM fallback.
         """
         if self.model is None or not frames:
             return [[] for _ in frames]
@@ -203,31 +244,29 @@ class YOLODetector:
 
         base_conf = confidence if confidence is not None else self.confidence_threshold
         target_classes = list(self.class_map.keys()) if self.class_map else None
+        predict_conf = max(0.18, min(base_conf, 0.25))
+
+        predict_kwargs = {
+            "source": cropped_frames,
+            "batch": len(cropped_frames),
+            "conf": predict_conf,
+            "iou": self.iou_threshold,
+            "classes": target_classes,
+            "imgsz": self.imgsz,
+            "device": self.device,
+            "verbose": False
+        }
+        if hasattr(self.model, "predict"):
+            predict_kwargs["agnostic_nms"] = True
 
         with torch.inference_mode():
             try:
-                results = self.model.predict(
-                    source=cropped_frames,
-                    batch=len(cropped_frames),
-                    conf=base_conf * 0.8,
-                    iou=self.iou_threshold,
-                    classes=target_classes,
-                    imgsz=self.imgsz,
-                    device=self.device,
-                    verbose=False
-                )
+                results = self.model.predict(**predict_kwargs)
             except Exception as e:
                 logger.warning(f"OOM batch prediction warning ({e}), falling back to CPU...")
-                results = self.model.predict(
-                    source=cropped_frames,
-                    batch=len(cropped_frames),
-                    conf=base_conf * 0.8,
-                    iou=self.iou_threshold,
-                    classes=target_classes,
-                    imgsz=self.imgsz,
-                    device="cpu",
-                    verbose=False
-                )
+                predict_kwargs["device"] = "cpu"
+                predict_kwargs.pop("agnostic_nms", None)
+                results = self.model.predict(**predict_kwargs)
 
         batch_detections = []
         for res, (ox, oy) in zip(results, offsets):
@@ -240,10 +279,12 @@ class YOLODetector:
 
                     class_name = self.class_map.get(cls_id, "car")
                     conf_offset = CLASS_CONFIDENCE_OFFSETS.get(class_name, 0.0)
-                    effective_thresh = max(0.1, base_conf + conf_offset)
+                    effective_thresh = max(0.18, base_conf + conf_offset)
 
                     if conf < effective_thresh:
                         continue
+
+                    class_name = self.class_map.get(cls_id, "car")
 
                     x1, y1, x2, y2 = [float(v) for v in xyxy]
                     x1 += ox
@@ -260,7 +301,7 @@ class YOLODetector:
                         "bbox": [x1, y1, x2, y2],
                         "centroid": (cx, cy)
                     })
-            batch_detections.append(dets)
+            batch_detections.append(self._suppress_duplicate_detections(dets, iou_thresh=self.iou_threshold))
 
         return batch_detections
 

@@ -5,6 +5,7 @@ import logging
 from typing import Dict, Any, Optional
 from app.detection.rtdetr_detector import RTDETRDetector
 from app.tracking.tracker import MultiObjectTracker
+from app.tracking.track import Track
 from app.analytics.speed import estimate_speed_kmh, assign_lane_and_direction
 
 from app.config import settings
@@ -158,6 +159,7 @@ class VideoFileLiveAnalyzer:
             expected_direction=expected_direction
         )
         self.analytics_engine.lane_detector.set_default_lanes_for_resolution(self.width, self.height)
+        Track.reset_id_counter()
         self.frame_idx = 0
         self.all_tracked_vehicles: Dict[int, Any] = {}
 
@@ -166,8 +168,18 @@ class VideoFileLiveAnalyzer:
         target_frame = max(0, min(self.total_frames - 1, int(timestamp_secs * self.fps)))
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
         self.frame_idx = target_frame
+        if target_frame <= 2:
+            Track.reset_id_counter()
         self.tracker = MultiObjectTracker(confidence_threshold=self.confidence_threshold)
         self.all_tracked_vehicles.clear()
+
+    def sync_time(self, timestamp_secs: float):
+        """Soft sync internal video capture to match client playback timestamp."""
+        target_frame = max(0, min(self.total_frames - 1, int(timestamp_secs * self.fps)))
+        # Only seek if drift between backend frame and video player exceeds 4 frames (~133ms)
+        if abs(self.frame_idx - target_frame) > 4:
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+            self.frame_idx = target_frame
 
     def step_next_frame(self) -> Optional[Dict[str, Any]]:
         """Reads next video frame, runs detection/Kalman step, returns rich live telemetry."""
@@ -214,12 +226,21 @@ class VideoFileLiveAnalyzer:
                 "status": t.status
             })
 
-        class_counts: Dict[str, int] = {}
+        class_counts: Dict[str, int] = {"car": 0, "bus": 0, "truck": 0, "motorcycle": 0}
         direction_counts: Dict[str, int] = {}
         speeds = []
 
         for t in self.all_tracked_vehicles.values():
             c_name = (t.class_name or "car").lower()
+            if c_name in ["van", "pickup", "lorry"]:
+                c_name = "truck"
+            elif c_name in ["coach", "minibus"]:
+                c_name = "bus"
+            elif c_name in ["motorbike", "scooter"]:
+                c_name = "motorcycle"
+            elif c_name in ["bike", "cyclist"]:
+                c_name = "bicycle"
+
             class_counts[c_name] = class_counts.get(c_name, 0) + 1
             d_name = t.direction or "EAST"
             direction_counts[d_name] = direction_counts.get(d_name, 0) + 1
@@ -236,6 +257,8 @@ class VideoFileLiveAnalyzer:
             "timestamp": timestamp,
             "frame_idx": current_idx,
             "total_frames": self.total_frames,
+            "video_width": self.width,
+            "video_height": self.height,
             "fps": round(self.fps, 1),
             "active_vehicles": len(tracks_payload),
             "total_vehicles": len(self.all_tracked_vehicles),

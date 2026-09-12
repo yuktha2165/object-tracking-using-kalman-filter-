@@ -2,9 +2,6 @@ export type ViewPage =
   | 'dashboard'
   | 'video-analysis'
   | 'live-results'
-  | 'traffic-analytics'
-  | 'vehicle-tracking'
-  | 'alerts'
   | 'history'
   | 'settings';
 

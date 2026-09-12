@@ -61,6 +61,15 @@ class VehicleCounter:
 
                 # Class breakdown
                 cls = track.class_name.lower()
+                if cls in ["van", "pickup", "lorry"]:
+                    cls = "truck"
+                elif cls in ["coach", "minibus"]:
+                    cls = "bus"
+                elif cls in ["motorbike", "scooter"]:
+                    cls = "motorcycle"
+                elif cls in ["bike", "cyclist"]:
+                    cls = "bicycle"
+
                 if cls in self.class_counts:
                     self.class_counts[cls] += 1
                 else:

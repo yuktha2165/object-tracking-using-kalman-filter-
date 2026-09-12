@@ -12,7 +12,6 @@ import {
   Radio,
   Video as VideoIcon,
   Square,
-  Activity,
   Zap,
   Gauge,
   Car,
@@ -92,6 +91,7 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
   const [flowTimeSeries, setFlowTimeSeries] = useState<Array<{ time: string; count: number }>>([]);
   const [laneCounts, setLaneCounts] = useState<Record<string, number>>({});
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
+  const [nativeResolution, setNativeResolution] = useState<{ width: number; height: number } | null>(null);
 
   // Live Camera / RTSP stream states
   const [isLiveActive, setIsLiveActive] = useState<boolean>(false);
@@ -110,6 +110,17 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
   const cameraWsRef = useRef<{ sendFrame: (b64: string) => void; sendRtspUrl: (url: string) => void; close: () => void } | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const cameraIntervalRef = useRef<any>(null);
+
+  // Sync videoId when activeJobId prop changes (e.g. from History or Dashboard)
+  useEffect(() => {
+    if (activeJobId && activeJobId !== videoId) {
+      setVideoId(activeJobId);
+      setIsAnalyzing(false);
+      setIsCompleted(false);
+      setLiveTracks([]);
+      setError(null);
+    }
+  }, [activeJobId]);
 
   // Fetch session metadata if videoId is active
   useEffect(() => {
@@ -190,6 +201,10 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
 
         if (data.lane_counts) setLaneCounts(data.lane_counts);
 
+        if (data.video_width && data.video_height) {
+          setNativeResolution({ width: data.video_width, height: data.video_height });
+        }
+
         if (data.events && data.events.length > 0) {
           setRecentEvents(prev => [...data.events, ...prev].slice(0, 10));
         }
@@ -254,6 +269,12 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
   const handleSeek = (seconds: number) => {
     if (liveWsRef.current) {
       liveWsRef.current.sendCommand({ action: 'seek', time: seconds });
+    }
+  };
+
+  const handleSyncTime = (seconds: number) => {
+    if (liveWsRef.current && isAnalyzing) {
+      liveWsRef.current.sendCommand({ action: 'sync', time: seconds });
     }
   };
 
@@ -400,74 +421,140 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
       {activeTab === 'upload' && (
         <div className="space-y-6">
           
-          {/* Main Focused Card: HTML5 Player with Dynamic Canvas Bounding Box Overlay */}
-          {(videoId || file) ? (
-            <VideoPlayerWithOverlay
-              videoId={videoId || ''}
-              tracks={liveTracks}
-              countingLine={countingLine}
-              lanePolygons={lanePolygons}
-              isAnalyzing={isAnalyzing}
-              isCompleted={isCompleted}
-              onStartLiveAnalysis={handleStartLiveAnalysis}
-              onPauseAnalysis={handlePauseAnalysis}
-              onResumeAnalysis={handleResumeAnalysis}
-              onStopAnalysis={handleStopAnalysis}
-              onSeek={handleSeek}
-              onVideoEnded={() => {
-                setIsAnalyzing(false);
-                setIsCompleted(true);
-              }}
-              videoRef={videoRef}
-            />
-          ) : (
-            <div className="itms-card p-10 text-center space-y-4">
-              <div className="p-4 rounded-2xl bg-orange-500/10 text-orange-500 inline-block">
-                <FileVideo className="w-12 h-12" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white">Select or Drag Traffic Video File</h3>
-                <p className="text-xs text-slate-400 mt-1">Upload a traffic video to play in the Dashboard with live concurrent AI analysis.</p>
-              </div>
+          {/* TOP SECTION: LIVE VIDEO ANALYSIS + LIVE EVENTS & TRAFFIC ALERTS BESIDE IT */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {/* Live Video Analysis Section (Left, lg:col-span-9) */}
+            <div className="lg:col-span-9 space-y-4">
+              {(videoId || file) ? (
+                <VideoPlayerWithOverlay
+                  videoId={videoId || ''}
+                  tracks={liveTracks}
+                  countingLine={countingLine}
+                  lanePolygons={lanePolygons}
+                  isAnalyzing={isAnalyzing}
+                  isCompleted={isCompleted}
+                  onStartLiveAnalysis={handleStartLiveAnalysis}
+                  onPauseAnalysis={handlePauseAnalysis}
+                  onResumeAnalysis={handleResumeAnalysis}
+                  onStopAnalysis={handleStopAnalysis}
+                  onSeek={handleSeek}
+                  onSyncTime={handleSyncTime}
+                  nativeWidth={nativeResolution?.width}
+                  nativeHeight={nativeResolution?.height}
+                  onVideoEnded={() => {
+                    setIsAnalyzing(false);
+                    setIsCompleted(true);
+                  }}
+                  videoRef={videoRef}
+                />
+              ) : (
+                <div className="itms-card p-10 text-center space-y-4">
+                  <div className="p-4 rounded-2xl bg-orange-500/10 text-orange-500 inline-block">
+                    <FileVideo className="w-12 h-12" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Select or Drag Traffic Video File</h3>
+                    <p className="text-xs text-slate-400 mt-1">Upload a traffic video to play in the Dashboard with live concurrent AI analysis.</p>
+                  </div>
 
-              <input
-                type="file"
-                accept="video/*"
-                onChange={handleFileChange}
-                className="hidden"
-                id="video-upload-input"
-              />
-              <label
-                htmlFor="video-upload-input"
-                className="inline-block px-6 py-3 rounded-xl bg-orange-500 hover:bg-orange-400 text-white font-bold text-xs uppercase tracking-wider cursor-pointer shadow-lg shadow-orange-500/20 transition"
-              >
-                Browse Video Files
-              </label>
-            </div>
-          )}
+                  <input
+                    type="file"
+                    accept="video/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="video-upload-input"
+                  />
+                  <label
+                    htmlFor="video-upload-input"
+                    className="inline-block px-6 py-3 rounded-xl bg-orange-500 hover:bg-orange-400 text-white font-bold text-xs uppercase tracking-wider cursor-pointer shadow-lg shadow-orange-500/20 transition"
+                  >
+                    Browse Video Files
+                  </label>
+                </div>
+              )}
 
-          {/* Upload Button step if file chosen but not yet uploaded */}
-          {file && !uploadedMeta && !videoId && (
-            <div className="flex justify-center">
-              <button
-                onClick={handleUpload}
-                disabled={uploading}
-                className="px-8 py-3.5 rounded-xl bg-orange-500 hover:bg-orange-400 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-orange-500/20 flex items-center space-x-2 transition"
-              >
-                {uploading ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Uploading & Preparing Feed...</span>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4" />
-                    <span>Upload Video Feed</span>
-                  </>
-                )}
-              </button>
+              {/* Upload Button step if file chosen but not yet uploaded */}
+              {file && !uploadedMeta && !videoId && (
+                <div className="flex justify-center">
+                  <button
+                    onClick={handleUpload}
+                    disabled={uploading}
+                    className="px-8 py-3.5 rounded-xl bg-orange-500 hover:bg-orange-400 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-orange-500/20 flex items-center space-x-2 transition"
+                  >
+                    {uploading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Uploading & Preparing Feed...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        <span>Upload Video Feed</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Live Events & Traffic Alerts Section Beside the Video (Right, lg:col-span-3 - Compact) */}
+            <div className="lg:col-span-3">
+              <div className="itms-card p-3.5 flex flex-col space-y-2.5 h-[410px] lg:h-[420px]">
+                <div className="flex items-center justify-between border-b border-[#192c43] pb-2">
+                  <h3 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider font-mono flex items-center space-x-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Live Alerts</span>
+                  </h3>
+                  <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
+                    recentEvents.length > 0 
+                      ? 'text-amber-400 bg-amber-500/10 border-amber-500/20 animate-pulse'
+                      : 'text-slate-400 bg-slate-500/10 border-slate-500/20'
+                  }`}>
+                    {recentEvents.length}
+                  </span>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-2 font-mono text-xs pr-1">
+                  {recentEvents.length > 0 ? (
+                    recentEvents.map((evt, idx) => (
+                      <div 
+                        key={idx} 
+                        className={`p-2.5 rounded-lg border flex items-start space-x-2 transition ${
+                          evt.event_type === 'WRONG_WAY' || evt.severity === 'HIGH'
+                            ? 'bg-red-500/10 border-red-500/30'
+                            : 'bg-[#0c1624] border-[#192c43]'
+                        }`}
+                      >
+                        <AlertTriangle className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 ${
+                          evt.event_type === 'WRONG_WAY' || evt.severity === 'HIGH' ? 'text-red-400' : 'text-amber-400'
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-slate-200 font-bold text-[11px] leading-snug">
+                            {evt.message || evt.event_type}
+                          </p>
+                          <div className="flex items-center flex-wrap gap-x-2 text-[9px] text-slate-400 mt-1">
+                            <span>⏱️ {evt.timestamp || `Frame #${evt.frame_idx}`}</span>
+                            {evt.lane && <span>🛣️ {evt.lane}</span>}
+                            {evt.class_name && <span className="uppercase text-orange-400 font-bold">{evt.class_name}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-4 space-y-1.5 text-slate-500 min-h-[160px]">
+                      <AlertTriangle className="w-6 h-6 text-slate-600/60" />
+                      <p className="text-[11px] font-mono">No violation events yet.</p>
+                      <p className="text-[9px] text-slate-600 max-w-[160px]">
+                        {isAnalyzing ? 'Monitoring feed for violations...' : 'Start analysis to view alerts.'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+          </div>
 
           {/* LIVE TELEMETRY KPI CARDS ROW */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
@@ -507,72 +594,23 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
             </div>
           </div>
 
-          {/* DYNAMIC DASHBOARD DATA GRID */}
+          {/* BOTTOM ANALYTICS & CONTROLS GRID */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            {/* Left Column: Live Vehicle Tracking Table */}
+            {/* Real-Time Traffic Density Flow Chart (Left, lg:col-span-7) */}
             <div className="lg:col-span-7 space-y-6">
               <div className="itms-card p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono flex items-center space-x-2">
-                    <Activity className="w-4 h-4 text-cyan-400" />
-                    <span>Live Vehicle Tracking Matrix</span>
+                    <TrendingUp className="w-4 h-4 text-orange-500" />
+                    <span>Real-Time Traffic Density Flow</span>
                   </h3>
-                  <span className="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
-                    {liveTracks.length} Active Tracks
+                  <span className="text-[10px] font-mono text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
+                    Live Telemetry
                   </span>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs font-mono">
-                    <thead>
-                      <tr className="border-b border-[#192c43] text-[10px] text-slate-400 uppercase">
-                        <th className="py-2.5 px-3">ID</th>
-                        <th className="py-2.5 px-3">Type</th>
-                        <th className="py-2.5 px-3">Lane</th>
-                        <th className="py-2.5 px-3">Direction</th>
-                        <th className="py-2.5 px-3">Speed</th>
-                        <th className="py-2.5 px-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#192c43]/50">
-                      {liveTracks.length > 0 ? (
-                        liveTracks.slice(0, 8).map((t) => (
-                          <tr key={t.track_id} className="hover:bg-[#0f1c2d]/50 transition">
-                            <td className="py-2 px-3 font-bold text-cyan-400">#{t.track_id}</td>
-                            <td className="py-2 px-3 text-slate-200 capitalize">{t.class_name}</td>
-                            <td className="py-2 px-3 text-slate-300">{t.lane || 'Lane 1'}</td>
-                            <td className="py-2 px-3 text-slate-300">{t.direction || 'EAST'}</td>
-                            <td className="py-2 px-3 text-slate-200 font-bold">
-                              {t.speed_kmh ? `${t.speed_kmh} km/h` : 'Tracking'}
-                            </td>
-                            <td className="py-2 px-3">
-                              <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                {t.status || 'TRACKING'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={6} className="py-6 text-center text-slate-500 text-xs">
-                            {isAnalyzing ? 'Scanning video frames for vehicles...' : 'Start live analysis to view real-time tracking.'}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Traffic Flow Time-Series Chart */}
-              <div className="itms-card p-6 space-y-4">
-                <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono flex items-center space-x-2">
-                  <TrendingUp className="w-4 h-4 text-orange-500" />
-                  <span>Real-Time Traffic Density Flow</span>
-                </h3>
-
-                <div className="h-44 w-full">
+                <div className="h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={flowTimeSeries.length > 0 ? flowTimeSeries : [{ time: '0:00', count: 0 }]}>
                       <XAxis dataKey="time" stroke="#475569" fontSize={10} />
@@ -587,10 +625,8 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
               </div>
             </div>
 
-            {/* Right Column: Parameters & Alerts */}
+            {/* Parameters & Detection Controls (Right, lg:col-span-5) */}
             <div className="lg:col-span-5 space-y-6">
-              
-              {/* Parameters Panel */}
               <div className="itms-card p-6 space-y-4">
                 <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono flex items-center space-x-2">
                   <Sliders className="w-4 h-4 text-orange-500" />
@@ -664,31 +700,6 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
                   </div>
                 )}
               </div>
-
-              {/* Recent Alerts Feed */}
-              <div className="itms-card p-6 space-y-4">
-                <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono flex items-center space-x-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-400" />
-                  <span>Live Events & Traffic Alerts</span>
-                </h3>
-
-                <div className="space-y-2 max-h-48 overflow-y-auto font-mono text-xs">
-                  {recentEvents.length > 0 ? (
-                    recentEvents.map((evt, idx) => (
-                      <div key={idx} className="p-2.5 rounded-lg bg-[#0c1624] border border-[#192c43] flex items-start space-x-2">
-                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-slate-200 font-bold text-[11px]">{evt.message || evt.event_type}</p>
-                          <span className="text-[9px] text-slate-500 block">Frame #{evt.frame_idx} | {evt.lane}</span>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-slate-500 text-[11px] py-4 text-center">No violation events recorded yet.</p>
-                  )}
-                </div>
-              </div>
-
             </div>
 
           </div>

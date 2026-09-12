@@ -1,4 +1,5 @@
 import os
+import time
 import uuid
 import shutil
 import asyncio
@@ -339,6 +340,11 @@ async def live_analysis_websocket(websocket: WebSocket, video_id: str):
                         analyzer.seek_time(target_time)
                     await websocket.send_json({"type": "status", "status": "SEEKED", "time": target_time})
 
+                elif action == "sync":
+                    target_time = float(msg.get("time", 0.0))
+                    if analyzer is not None:
+                        analyzer.sync_time(target_time)
+
                 elif action == "stop":
                     is_running = False
                     if analyzer is not None:
@@ -350,11 +356,15 @@ async def live_analysis_websocket(websocket: WebSocket, video_id: str):
                 pass  # Continue streaming next frame telemetry
 
             if is_running and analyzer is not None:
+                step_start = time.time()
                 telemetry = analyzer.step_next_frame()
                 if telemetry is not None:
                     await websocket.send_json(telemetry)
-                    # Yield slightly to maintain ~30 FPS sync pacing (~30ms)
-                    await asyncio.sleep(0.02)
+                    # Adaptive frame pacing to strictly match video native FPS (e.g. 1/30s = ~33.3ms)
+                    step_duration = time.time() - step_start
+                    frame_target_sec = 1.0 / max(1.0, float(analyzer.fps))
+                    sleep_time = max(0.002, frame_target_sec - step_duration)
+                    await asyncio.sleep(sleep_time)
                 else:
                     # Video completed!
                     is_running = False

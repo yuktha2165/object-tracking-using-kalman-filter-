@@ -9,9 +9,14 @@ class Track:
         self.track_id: int = int(Track._id_counter)
         Track._id_counter += 1
 
-        self.class_name: str = str(class_name)
+        norm_class = str(class_name).lower()
+        self.class_name: str = norm_class
         self.bbox: List[float] = [float(b) for b in bbox] # [x1, y1, x2, y2]
         self.confidence: float = float(confidence)
+
+        # Class voting memory across frames to prevent class jitter and bias
+        init_weight = float(confidence) * (1.8 if norm_class in ["truck", "bus"] else 1.0)
+        self.class_votes: Dict[str, float] = {norm_class: init_weight}
 
         x1, y1, x2, y2 = self.bbox
         cx = float((x1 + x2) / 2.0)
@@ -30,9 +35,6 @@ class Track:
         self.first_seen_frame: int = int(frame_idx)
         self.last_seen_frame: int = int(frame_idx)
 
-        self.lane: Optional[str] = None
-        self.direction: str = "UNKNOWN"
-        self.speed: Optional[float] = None
         self.lane: Optional[str] = None
         self.direction: str = "UNKNOWN"
         self.speed: Optional[float] = None
@@ -61,8 +63,13 @@ class Track:
 
     def update(self, bbox: List[float], class_name: str, confidence: float, frame_idx: int):
         """Update track with new YOLO detection measurement."""
-        self.class_name = str(class_name)
-        self.confidence = float(confidence)
+        norm_class = str(class_name).lower()
+        c_weight = float(confidence) * (1.8 if norm_class in ["truck", "bus"] else 1.0)
+        self.class_votes[norm_class] = self.class_votes.get(norm_class, 0.0) + c_weight
+        self.class_name = max(self.class_votes.items(), key=lambda x: x[1])[0]
+
+        # Smooth confidence score with Exponential Moving Average
+        self.confidence = 0.6 * self.confidence + 0.4 * float(confidence)
 
         x1, y1, x2, y2 = [float(b) for b in bbox]
         w = max(1.0, x2 - x1)
@@ -96,11 +103,12 @@ class Track:
             self.status = "NEW"
 
     def mark_missed(self, max_missed: int):
-        """Mark detection missed for current frame."""
+        """Mark detection missed for current frame, decay confidence, and drop track if max_missed or low conf."""
         self.missed_frames += 1
+        self.confidence *= 0.85  # Confidence decays on missed frames
         if self.status != "REMOVED":
             self.status = "TEMPORARILY_LOST"
-        if self.missed_frames >= max_missed:
+        if self.missed_frames >= max_missed or self.confidence < 0.20:
             self.status = "REMOVED"
 
     def propagate_skipped_frame(self, frame_idx: int):

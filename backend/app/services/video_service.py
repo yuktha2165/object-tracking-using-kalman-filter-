@@ -88,14 +88,25 @@ def draw_frame_overlays(
     for track in active_tracks:
         x1, y1, x2, y2 = [int(v) for v in track.bbox]
         cls = track.class_name.lower()
+        if cls in ["van", "pickup", "lorry"]:
+            cls = "truck"
+        elif cls in ["coach", "minibus"]:
+            cls = "bus"
+        elif cls in ["motorbike", "scooter"]:
+            cls = "motorcycle"
+        elif cls in ["bike", "cyclist"]:
+            cls = "bicycle"
         color = COLOR_MAP.get(cls, DEFAULT_COLOR)
 
         # Draw trajectory tail
         if len(track.trajectory) > 1:
             pts = [(int(pt[0]), int(pt[1])) for pt in track.trajectory]
             for i in range(1, len(pts)):
-                thickness = int(np.sqrt(float(i + 1)) * 0.8) + 1
-                cv2.line(img, pts[i - 1], pts[i], color, thickness, cv2.LINE_AA)
+                dx = pts[i][0] - pts[i - 1][0]
+                dy = pts[i][1] - pts[i - 1][1]
+                if math.hypot(dx, dy) <= settings.MAX_ASSOCIATION_DISTANCE:
+                    thickness = int(np.sqrt(float(i + 1)) * 0.8) + 1
+                    cv2.line(img, pts[i - 1], pts[i], color, thickness, cv2.LINE_AA)
 
         # Draw Bounding Box
         cv2.rectangle(img, (x1, y1), (x2, y2), color, 2, cv2.LINE_AA)

@@ -1,589 +1,365 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { 
-  Car, 
-  Bus, 
-  Truck, 
-  Bike, 
-  Gauge, 
+  Video, 
+  ArrowRight, 
+  Cpu, 
+  ShieldCheck, 
+  Zap, 
   Activity, 
-  AlertTriangle, 
-  Upload, 
-  MoreVertical, 
-  Play, 
-  Pause,
-  Volume2, 
-  Maximize, 
-  ArrowUpRight,
-  Info,
-  TrendingUp
+  Compass,
+  Gauge,
+  Eye,
+  GitCommit,
+  Share2,
+  Layers,
+  Play,
+  Sliders,
+  Sparkles
 } from 'lucide-react';
-import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  ResponsiveContainer, 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  BarChart, 
-  Bar 
-} from 'recharts';
-import { api } from '../services/api';
-import { AnalysisSessionSummary, ViewPage } from '../types';
+import { ViewPage } from '../types';
 
 interface DashboardProps {
   onSelectView: (view: ViewPage) => void;
-  onSelectSession: (sessionId: string) => void;
+  onSelectSession?: (sessionId: string) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ onSelectView, onSelectSession }) => {
-  const [sessions, setSessions] = useState<AnalysisSessionSummary[]>([]);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [videoProgress, setVideoProgress] = useState(134); // ~ 00:02:14 out of 00:05:32 (332s total)
+export const Dashboard: React.FC<DashboardProps> = ({ onSelectView }) => {
+  // Active Category Filter for Models & Mechanisms
+  const [activeCategory, setActiveCategory] = useState<'all' | 'detection' | 'tracking' | 'analytics' | 'safety' | 'streaming'>('all');
 
-  useEffect(() => {
-    api.getHistory()
-      .then((res) => {
-        setSessions(res.sessions || []);
-      })
-      .catch(() => {});
-  }, []);
-
-  const latestSession = sessions.length > 0 ? sessions[0] : null;
-
-  // Donut chart data for Vehicle Type Distribution
-  const donutData = [
-    { name: 'Cars', value: 52, percentage: '60%', color: '#06b6d4' },
-    { name: 'Buses', value: 8, percentage: '9%', color: '#0d9488' },
-    { name: 'Trucks', value: 17, percentage: '20%', color: '#f97316' },
-    { name: 'Motorcycles', value: 10, percentage: '11%', color: '#94a3b8' },
-  ];
-
-  // Time-Series data for Traffic Flow Over Time
-  const flowData = [
-    { time: '0:00', vehicles: 28, speed: 20 },
-    { time: '1:00', vehicles: 45, speed: 25 },
-    { time: '2:00', vehicles: 52, speed: 22 },
-    { time: '3:00', vehicles: 68, speed: 30 },
-    { time: '4:00', vehicles: 55, speed: 28 },
-    { time: '5:00', vehicles: 72, speed: 34 },
-  ];
-
-  // Bar Chart data for Lane-wise Vehicle Count
-  const laneData = [
-    { lane: 'Lane 1', count: 35, color: '#00bcd4' },
-    { lane: 'Lane 2', count: 42, color: '#f97316' },
-    { lane: 'Lane 3', count: 21, color: '#00bcd4' },
-    { lane: 'Lane 4', count: 12, color: '#00bcd4' },
-  ];
-
-  // Live Vehicle Tracking table rows matching screenshot
-  const vehicleTrackingRows = [
-    { id: '01', type: 'Car', lane: '1', speed: 42, direction: 'East', status: 'Normal' },
-    { id: '02', type: 'Bus', lane: '2', speed: 31, direction: 'East', status: 'Normal' },
-    { id: '03', type: 'Truck', lane: '1', speed: 28, direction: 'East', status: 'Normal' },
-    { id: '17', type: 'Car', lane: '3', speed: 8, direction: 'West', status: 'Alert' },
-    { id: '21', type: 'Car', lane: '2', speed: 36, direction: 'East', status: 'Normal' },
-    { id: '25', type: 'Motorcycle', lane: '1', speed: 48, direction: 'East', status: 'Normal' },
-  ];
-
-  // Recent Events / Alerts list matching screenshot
-  const recentAlerts = [
+  // Comprehensive Models & Mechanisms Catalog
+  const mechanisms = [
     {
-      id: 1,
-      type: 'warning',
-      title: 'Wrong-way vehicle detected',
-      subtitle: 'Track ID: 27 | Lane 2',
-      time: '14:28:12'
+      id: 'yolo',
+      category: 'detection',
+      name: 'YOLOv8 / YOLOv11 Neural Detector',
+      subtitle: 'Single-Stage Anchor-Free Convolutional Object Detection',
+      icon: Eye,
+      badgeColor: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-400',
+      description: 'Employs a CSPDarknet backbone paired with C2f feature integration and PAN-FPN neck. Features Task-Aligned One-Stage Object Detection (TOOD) loss for simultaneous bounding box regression and class scoring.',
+      highlights: [
+        'Multi-class detection: Cars, Buses, Trucks, Motorcycles, Bicycles',
+        'Specialized heavy-vehicle priority scoring & confidence tuning',
+        'High-throughput GPU/MPS hardware inference (>60 FPS)'
+      ],
+      techSpecs: 'Architecture: CSPDarknet • Loss: CIoU + DFL • Resolution: 640x640 / Native'
     },
     {
-      id: 2,
-      type: 'warning',
-      title: 'Congestion detected',
-      subtitle: 'Lane 2 | Density: 78%',
-      time: '14:26:05'
+      id: 'rtdetr',
+      category: 'detection',
+      name: 'RT-DETR (Real-Time Detection Transformer)',
+      subtitle: 'End-to-End Vision Transformer with Deformable Attention',
+      icon: Cpu,
+      badgeColor: 'border-purple-500/30 bg-purple-500/10 text-purple-400',
+      description: 'First real-time end-to-end vision transformer. Combines an efficient hybrid encoder (AIFI intra-scale interaction + CCFM cross-scale fusion) and query-based transformer decoder, completely removing NMS post-processing.',
+      highlights: [
+        'Zero Non-Maximum Suppression (NMS) latency bottlenecks',
+        'Exceptional accuracy under dense traffic & heavy vehicle overlap',
+        'Direct bipartite set prediction loss with Hungarian matching'
+      ],
+      techSpecs: 'Encoder: AIFI + CCFM • Decoder: Deformable Transformer • Set Matching Loss'
     },
     {
-      id: 3,
-      type: 'info',
-      title: 'Restricted zone violation',
-      subtitle: 'Track ID: 34',
-      time: '14:24:18'
+      id: 'kalman',
+      category: 'tracking',
+      name: '8-State Extended Kalman Filter',
+      subtitle: 'Continuous Motion Modeling & Centroid Covariance Estimation',
+      icon: Compass,
+      badgeColor: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+      description: 'Models vehicle trajectory state dynamics using an 8-dimensional state vector x = [x, y, a, h, ẋ, ẏ, ȧ, ḣ]ᵀ under discrete constant-velocity assumptions. Predicts position across missing frames and filters out detector jitter.',
+      highlights: [
+        'State space: (x, y) center, aspect ratio a, height h, and 4 velocity components',
+        'Smooths motion paths and mitigates bounding box camera vibration',
+        'Maintains target position estimates during temporary visual occlusions'
+      ],
+      techSpecs: 'State: 8D Vector • Motion Model: Constant Velocity • Process: Discrete Gaussian Noise'
     },
     {
-      id: 4,
-      type: 'warning',
-      title: 'Overspeeding vehicle',
-      subtitle: 'Track ID: 19 | 68 km/h',
-      time: '14:22:41'
+      id: 'bytetrack',
+      category: 'tracking',
+      name: 'ByteTrack & Hungarian Data Association',
+      subtitle: 'Two-Stage Bipartite Matching with Low-Score Recall',
+      icon: GitCommit,
+      badgeColor: 'border-orange-500/30 bg-orange-500/10 text-orange-400',
+      description: 'Associates detections with active tracks using cost matrices combining IoU distance, centroid proximity, and soft classification consistency. Two-stage matching keeps low-confidence detections during partial occlusions.',
+      highlights: [
+        'Stage 1: High-confidence boxes (conf ≥ τ_high) matched via Hungarian Algorithm',
+        'Stage 2: Unmatched tracks matched with low-confidence boxes to avoid track fragmentation',
+        'Sequential persistent Vehicle IDs (#01, #02...) with interactive operator tagging'
+      ],
+      techSpecs: 'Matching: Munkres Linear Sum Assignment • Metric: Cost Matrix (1 - IoU + Pen_class)'
+    },
+    {
+      id: 'counting',
+      category: 'analytics',
+      name: 'Virtual Line Counting & Ray-Casting',
+      subtitle: 'Deterministic 2-Frame Segment Line Intersection Testing',
+      icon: Activity,
+      badgeColor: 'border-teal-500/30 bg-teal-500/10 text-teal-400',
+      description: 'Calculates directional passage by testing line segment intersection between the vehicle 2-frame centroid vector [P_{t-1}, P_t] and the calibrated virtual counting line segment [L_A, L_B] using vector orientation cross products.',
+      highlights: [
+        'Prevents double-counting and phantom counts from jitter',
+        'Direction-sensitive: Verifies entry and exit flow vector orientation',
+        'Real-time class-wise accumulation (Cars, Buses, Trucks, Two-Wheelers)'
+      ],
+      techSpecs: 'Method: 2D Cross-Product Line Segment Intersection • Filter: Single-Event State'
+    },
+    {
+      id: 'speed',
+      category: 'analytics',
+      name: 'Optical Speed Estimation & Calibration',
+      subtitle: 'Perspective Homography & Exponential Moving Average (EMA)',
+      icon: Gauge,
+      badgeColor: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+      description: 'Transforms image-plane pixel displacement into real-world metric distances via calibrated pixels-per-meter (PPM) scaling: d = √(Δx² + Δy²) / PPM. Speed v = (d / Δt) × 3.6 km/h is filtered using an Exponential Moving Average (α = 0.35).',
+      highlights: [
+        'Configurable Pixels-Per-Meter (PPM) camera calibration factor',
+        'Adaptive FPS delta timing ensures accurate speeds on variable framerates',
+        'EMA smoothing eliminates erratic instantaneous velocity spikes'
+      ],
+      techSpecs: 'Formula: v = (Δd / Δt) × 3.6 km/h • Smoothing: EMA (α = 0.35) • Unit: km/h'
+    },
+    {
+      id: 'density',
+      category: 'analytics',
+      name: 'Lane Occupancy & Density Classification',
+      subtitle: 'Point-in-Polygon (PIP) Spatial Road Utilization',
+      icon: Layers,
+      badgeColor: 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+      description: 'Determines vehicle lane occupancy via Ray-Casting Point-in-Polygon tests against calibrated road polygon boundaries. Computes road spatial density ratio and classifies traffic state into Level of Service (LOS) tiers.',
+      highlights: [
+        'Dynamic multi-lane vehicle allocation (Lane 1, 2, 3...)',
+        'Density categorization: Free Flow, Normal, Moderate, High Congestion',
+        'Real-time lane utilization distribution bar metrics'
+      ],
+      techSpecs: 'Spatial Algorithm: Jordan Curve Ray-Casting • Output: Lane ID + Density %'
+    },
+    {
+      id: 'violations',
+      category: 'safety',
+      name: 'Wrong-Way & Incident Detection Vector Engine',
+      subtitle: 'Cosine Similarity Directional Alignment & Safety Triggers',
+      icon: ShieldCheck,
+      badgeColor: 'border-red-500/30 bg-red-500/10 text-red-400',
+      description: 'Monitors vehicle direction by computing the motion unit vector v̂ and evaluating the dot product with the predefined road corridor vector û: cos(θ) = v̂ · û. Flagged as wrong-way violation when cos(θ) < -0.5 (divergence > 120°).',
+      highlights: [
+        'Wrong-way driving detection with persistent multi-frame confirmation',
+        'Overspeeding threshold alerts with vehicle ID and speed telemetry',
+        'Stationary vehicle / bottleneck queue detection in active traffic lanes'
+      ],
+      techSpecs: 'Vector Metric: cos(θ) = v̂ · û • Threshold: cos(θ) < -0.5 • Multi-Frame Validation'
+    },
+    {
+      id: 'streaming',
+      category: 'streaming',
+      name: 'Bi-Directional WebSocket Telemetry Engine',
+      subtitle: 'Full-Duplex Asynchronous Video-Sync & Telemetry Streaming',
+      icon: Share2,
+      badgeColor: 'border-sky-500/30 bg-sky-500/10 text-sky-400',
+      description: 'Facilitates real-time, low-latency communication between FastAPI async event loops and the React browser client. Streams frame metadata, bounding coordinates, vehicle classes, speeds, and alerts concurrently with video playback.',
+      highlights: [
+        'Bi-directional time-synchronization keeping inference aligned with HTML5 video',
+        'Live client controls: Dynamic confidence threshold, missed frames, & calibration updates',
+        'Mathematical letterbox/pillarbox coordinate calibration for object-contain scaling'
+      ],
+      techSpecs: 'Protocol: RFC 6455 WebSockets • Format: Structured JSON Telemetry + Binary Frame Sync'
     }
   ];
 
+  const filteredMechanisms = activeCategory === 'all' 
+    ? mechanisms 
+    : mechanisms.filter(m => m.category === activeCategory);
+
   return (
-    <div className="p-6 space-y-5 bg-[#0a111a] min-h-screen text-slate-100 font-sans">
+    <div className="p-6 md:p-10 space-y-10 bg-[#0a111a] min-h-screen text-slate-100 font-sans max-w-7xl mx-auto">
       
-      {/* 1. TOP KPI CARDS ROW */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-        
-        {/* Total Vehicles Card */}
-        <div className="itms-card p-3 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400">Total Vehicles</span>
-            <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400">
-              <Car className="w-4 h-4" />
+      {/* 1. PROJECT DESCRIPTION HERO SECTION */}
+      <section className="relative overflow-hidden rounded-2xl border border-[#1b2b3f] bg-gradient-to-br from-[#0e1b2b] via-[#09121d] to-[#070d15] p-8 md:p-10 shadow-2xl">
+        {/* Ambient background glows */}
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 space-y-6">
+          {/* Header Badges & Quick Action */}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
+                <span>Intelligent Transportation Systems (ITS)</span>
+              </span>
+              <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                <Cpu className="w-3.5 h-3.5" />
+                <span>Computer Vision & Deep Learning</span>
+              </span>
+              <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                <Zap className="w-3.5 h-3.5" />
+                <span>Real-Time Processing</span>
+              </span>
+            </div>
+
+            <button
+              onClick={() => onSelectView('video-analysis')}
+              className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold flex items-center space-x-2 shadow-lg shadow-orange-500/20 transition cursor-pointer shrink-0"
+            >
+              <Video className="w-4 h-4" />
+              <span>Open Video Analysis</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Title & Tagline */}
+          <div className="space-y-3">
+            <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-white">
+              Intelligent Traffic Monitoring & Analysis System
+            </h1>
+            <p className="text-sm md:text-base text-slate-300 max-w-4xl leading-relaxed">
+              An enterprise-grade, end-to-end computer vision and intelligent telemetry platform designed for continuous traffic surveillance. Leveraging deep neural detectors, Kalman-filter multi-object tracking, and automated flow analytics, the system transforms raw video feeds into actionable real-time traffic intelligence.
+            </p>
+          </div>
+
+          {/* Core Highlights Quick Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-[#18293d]">
+            <div className="p-3 rounded-xl bg-[#0b1523] border border-[#18293d]">
+              <span className="text-[11px] text-slate-400 block font-medium">Neural Models</span>
+              <span className="text-sm font-bold text-white mt-0.5 block">YOLOv8 & RT-DETR</span>
+            </div>
+            <div className="p-3 rounded-xl bg-[#0b1523] border border-[#18293d]">
+              <span className="text-[11px] text-slate-400 block font-medium">Tracking Engine</span>
+              <span className="text-sm font-bold text-white mt-0.5 block">ByteTrack + 8D Kalman</span>
+            </div>
+            <div className="p-3 rounded-xl bg-[#0b1523] border border-[#18293d]">
+              <span className="text-[11px] text-slate-400 block font-medium">Telemetry Latency</span>
+              <span className="text-sm font-bold text-emerald-400 mt-0.5 block">&lt; 35ms (WebSocket)</span>
+            </div>
+            <div className="p-3 rounded-xl bg-[#0b1523] border border-[#18293d]">
+              <span className="text-[11px] text-slate-400 block font-medium">Safety Violations</span>
+              <span className="text-sm font-bold text-orange-400 mt-0.5 block">Wrong-Way & Speeding</span>
             </div>
           </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl font-bold text-white tracking-tight">87</span>
-            <span className="text-[10px] font-semibold text-emerald-400 flex items-center">
-              ↑ 12%
-            </span>
-          </div>
-          <span className="text-[9px] text-slate-500 mt-0.5">vs last analysis</span>
         </div>
+      </section>
 
-        {/* Cars Card */}
-        <div className="itms-card p-3 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400">Cars</span>
-            <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400">
-              <Car className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-white tracking-tight">52</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">60%</div>
-          </div>
-        </div>
-
-        {/* Buses Card */}
-        <div className="itms-card p-3 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400">Buses</span>
-            <div className="p-1.5 rounded-lg bg-teal-500/10 text-teal-400">
-              <Bus className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-white tracking-tight">8</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">9%</div>
-          </div>
-        </div>
-
-        {/* Trucks Card */}
-        <div className="itms-card p-3 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400">Trucks</span>
-            <div className="p-1.5 rounded-lg bg-orange-500/10 text-orange-400">
-              <Truck className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-white tracking-tight">17</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">20%</div>
-          </div>
-        </div>
-
-        {/* Motorcycles Card */}
-        <div className="itms-card p-3 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400">Motorcycles</span>
-            <div className="p-1.5 rounded-lg bg-slate-500/10 text-slate-400">
-              <Bike className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-white tracking-tight">10</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">11%</div>
-          </div>
-        </div>
-
-        {/* Average Speed Card */}
-        <div className="itms-card p-3 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400">Average Speed</span>
-            <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400">
-              <Gauge className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2">
-            <div className="text-xl font-bold text-white tracking-tight">34 km/h</div>
-          </div>
-        </div>
-
-        {/* Traffic Density Card */}
-        <div className="itms-card p-3 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400">Traffic Density</span>
-            <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400">
-              <Activity className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl font-bold text-white tracking-tight">72%</span>
-            <span className="text-[10px] font-bold text-cyan-400">High</span>
-          </div>
-        </div>
-
-        {/* Congestion Card */}
-        <div className="itms-card p-3 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-400">Congestion</span>
-            <div className="p-1.5 rounded-lg bg-orange-500/10 text-orange-400">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2">
-            <div className="text-base font-bold text-orange-500 tracking-tight uppercase">MODERATE</div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* 2. MAIN MIDDLE SECTION (2 COLUMNS) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        
-        {/* Left 8 Cols: Video Analysis */}
-        <div className="lg:col-span-7 itms-card p-4 flex flex-col justify-between space-y-3">
-          {/* Card Header */}
-          <div className="flex items-center justify-between">
+      {/* 2. MODELS & MECHANISMS ARCHITECTURE SECTION */}
+      <section className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
             <div className="flex items-center space-x-2">
-              <span className="w-1 h-4 rounded-full bg-orange-500 inline-block" />
-              <div>
-                <h3 className="text-base font-bold text-white tracking-tight">Video Analysis</h3>
-                <p className="text-xs text-slate-400">AI-powered vehicle detection and tracking</p>
-              </div>
+              <span className="w-1.5 h-5 rounded-full bg-orange-500 inline-block" />
+              <h2 className="text-xl font-bold text-white tracking-tight">AI Models & Core Mechanisms</h2>
             </div>
-            <div className="flex items-center space-x-2">
+            <p className="text-xs text-slate-400 mt-1">
+              Architectures, algorithmic mechanisms, mathematical models, and telemetry pipelines utilized in the system
+            </p>
+          </div>
+
+          {/* Category Filter Pills */}
+          <div className="flex flex-wrap items-center gap-1.5 bg-[#0c1624] p-1.5 rounded-xl border border-[#18293d]">
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'detection', label: 'Detection Models' },
+              { id: 'tracking', label: 'Tracking Engine' },
+              { id: 'analytics', label: 'Analytics' },
+              { id: 'safety', label: 'Safety & Alerts' },
+              { id: 'streaming', label: 'Streaming' }
+            ].map((tab) => (
               <button
-                onClick={() => onSelectView('video-analysis')}
-                className="px-3 py-1.5 rounded-lg bg-transparent border border-orange-500/80 text-orange-400 hover:bg-orange-500/10 text-xs font-medium flex items-center space-x-1.5 transition"
+                key={tab.id}
+                onClick={() => setActiveCategory(tab.id as any)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer ${
+                  activeCategory === tab.id
+                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
               >
-                <Upload className="w-3.5 h-3.5 text-orange-400" />
-                <span>Upload Video</span>
+                {tab.label}
               </button>
-              <button className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400">
-                <MoreVertical className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* AI Video Display Overlay */}
-          <div className="relative rounded-xl overflow-hidden bg-slate-950 aspect-video w-full border border-[#192c43] group">
-            {/* Background Traffic Image / Canvas Simulation */}
-            <div 
-              className="absolute inset-0 bg-cover bg-center opacity-90"
-              style={{
-                backgroundImage: `url('https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80')`
-              }}
-            />
-            
-            {/* Subtle Gradient Overlays */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/20" />
-
-            {/* AI Bounding Boxes Overlays (Matching screenshot positions & labels) */}
-            
-            {/* Truck #08 28 km/h */}
-            <div className="absolute top-[28%] left-[34%] w-[13%] h-[26%] border-2 border-orange-500 rounded bg-orange-500/10 flex flex-col justify-start pointer-events-none">
-              <div className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 self-start -mt-5 rounded-t-sm shadow">
-                Truck #08<br /><span className="text-[8px] font-normal">28 km/h</span>
-              </div>
-            </div>
-
-            {/* Bus #03 31 km/h */}
-            <div className="absolute top-[32%] left-[49%] w-[14%] h-[32%] border-2 border-teal-400 rounded bg-teal-400/10 flex flex-col justify-start pointer-events-none">
-              <div className="bg-teal-500 text-white text-[9px] font-bold px-1.5 py-0.5 self-start -mt-5 rounded-t-sm shadow">
-                Bus #03<br /><span className="text-[8px] font-normal">31 km/h</span>
-              </div>
-            </div>
-
-            {/* Car #14 36 km/h */}
-            <div className="absolute top-[34%] left-[25%] w-[8%] h-[14%] border-2 border-teal-400 rounded bg-teal-400/10 flex flex-col justify-start pointer-events-none">
-              <div className="bg-teal-500 text-white text-[9px] font-bold px-1 py-0.5 self-start -mt-5 rounded-t-sm shadow">
-                Car #14<br /><span className="text-[8px] font-normal">36 km/h</span>
-              </div>
-            </div>
-
-            {/* Car #12 42 km/h */}
-            <div className="absolute top-[38%] left-[15%] w-[10%] h-[16%] border-2 border-teal-400 rounded bg-teal-400/10 flex flex-col justify-start pointer-events-none">
-              <div className="bg-teal-500 text-white text-[9px] font-bold px-1 py-0.5 self-start -mt-5 rounded-t-sm shadow">
-                Car #12<br /><span className="text-[8px] font-normal">42 km/h</span>
-              </div>
-            </div>
-
-            {/* Car #17 45 km/h */}
-            <div className="absolute top-[38%] left-[40%] w-[10%] h-[16%] border-2 border-teal-400 rounded bg-teal-400/10 flex flex-col justify-start pointer-events-none">
-              <div className="bg-teal-500 text-white text-[9px] font-bold px-1 py-0.5 self-start -mt-5 rounded-t-sm shadow">
-                Car #17<br /><span className="text-[8px] font-normal">45 km/h</span>
-              </div>
-            </div>
-
-            {/* Motorcycle #25 48 km/h */}
-            <div className="absolute top-[52%] left-[27%] w-[7%] h-[20%] border-2 border-orange-500 rounded bg-orange-500/10 flex flex-col justify-start pointer-events-none">
-              <div className="bg-orange-500 text-white text-[9px] font-bold px-1 py-0.5 self-start -mt-5 rounded-t-sm shadow leading-tight">
-                Motorcycle #25<br /><span className="text-[8px] font-normal">48 km/h</span>
-              </div>
-            </div>
-
-            {/* Car #21 38 km/h */}
-            <div className="absolute top-[48%] left-[56%] w-[11%] h-[20%] border-2 border-teal-400 rounded bg-teal-400/10 flex flex-col justify-start pointer-events-none">
-              <div className="bg-teal-500 text-white text-[9px] font-bold px-1 py-0.5 self-start -mt-5 rounded-t-sm shadow">
-                Car #21<br /><span className="text-[8px] font-normal">38 km/h</span>
-              </div>
-            </div>
-
-            {/* Lane Markers / Guidelines simulation */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-40">
-              <line x1="30%" y1="30%" x2="20%" y2="90%" stroke="#06b6d4" strokeWidth="2" strokeDasharray="6,6" />
-              <line x1="45%" y1="30%" x2="40%" y2="90%" stroke="#f97316" strokeWidth="2" strokeDasharray="6,6" />
-              <line x1="60%" y1="30%" x2="65%" y2="90%" stroke="#06b6d4" strokeWidth="2" strokeDasharray="6,6" />
-            </svg>
-          </div>
-
-          {/* Custom Video Control Bar */}
-          <div className="flex items-center space-x-3 pt-1 text-slate-300 text-xs">
-            <button 
-              onClick={() => setIsPlaying(!isPlaying)} 
-              className="p-1 rounded hover:bg-slate-800 text-white transition"
-            >
-              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white" />}
-            </button>
-
-            <span className="font-mono text-[11px] text-slate-400">00:02:14 / 00:05:32</span>
-
-            {/* Progress Bar Track */}
-            <div className="flex-1 relative flex items-center cursor-pointer">
-              <div className="w-full h-1.5 rounded-full bg-slate-800 relative overflow-hidden">
-                <div className="h-full bg-orange-500 rounded-full" style={{ width: '40%' }} />
-              </div>
-              <div className="absolute left-[40%] w-3 h-3 bg-orange-500 rounded-full border-2 border-slate-900 shadow -translate-x-1/2" />
-            </div>
-
-            <div className="flex items-center space-x-3 text-slate-400">
-              <Volume2 className="w-4 h-4 cursor-pointer hover:text-white" />
-              <span className="text-xs font-semibold cursor-pointer hover:text-white">1x</span>
-              <Maximize className="w-4 h-4 cursor-pointer hover:text-white" />
-            </div>
-          </div>
-        </div>
-
-        {/* Right 5 Cols: Vehicle Type Distribution & Traffic Flow Over Time */}
-        <div className="lg:col-span-5 flex flex-col space-y-5">
-          
-          {/* Top: Vehicle Type Distribution */}
-          <div className="itms-card p-4 flex-1 flex flex-col justify-between">
-            <div className="flex items-center space-x-2 mb-2">
-              <span className="w-1 h-4 rounded-full bg-orange-500 inline-block" />
-              <h3 className="text-sm font-bold text-white tracking-tight">Vehicle Type Distribution</h3>
-            </div>
-
-            <div className="flex items-center justify-between h-44">
-              {/* Donut Chart with total 87 Vehicles in Center */}
-              <div className="w-1/2 h-full relative flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={donutData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={65}
-                      paddingAngle={3}
-                      dataKey="value"
-                    >
-                      {donutData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} stroke="#0f1c2d" strokeWidth={2} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                
-                {/* Center Badge */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-xl font-bold text-white font-mono leading-none">87</span>
-                  <span className="text-[10px] text-slate-400 font-medium mt-0.5">Vehicles</span>
-                </div>
-              </div>
-
-              {/* Legend List */}
-              <div className="w-1/2 pl-4 space-y-2 text-xs">
-                {donutData.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                      <span className="text-slate-300 font-medium">{item.name}</span>
-                    </div>
-                    <span className="text-slate-400 font-mono text-[11px]">{item.value} ({item.percentage})</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom: Traffic Flow Over Time */}
-          <div className="itms-card p-4 flex-1 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <span className="w-1 h-4 rounded-full bg-orange-500 inline-block" />
-                <h3 className="text-sm font-bold text-white tracking-tight">Traffic Flow Over Time</h3>
-              </div>
-              <div className="flex items-center space-x-4 text-[10px]">
-                <div className="flex items-center space-x-1">
-                  <span className="w-2.5 h-0.5 bg-teal-400 rounded-full" />
-                  <span className="text-slate-400">Vehicle Count</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <span className="w-2.5 h-0.5 bg-orange-500 rounded-full" />
-                  <span className="text-slate-400">Average Speed</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="h-40 w-full mt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={flowData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="time" stroke="#475569" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="left" stroke="#475569" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} domain={[0, 100]} />
-                  <YAxis yAxisId="right" orientation="right" stroke="#475569" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} domain={[0, 80]} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f1c2d', borderColor: '#192c43', borderRadius: '8px', fontSize: '11px' }}
-                  />
-                  <Line yAxisId="left" type="monotone" dataKey="vehicles" stroke="#06b6d4" strokeWidth={2} dot={{ fill: '#06b6d4', r: 3 }} />
-                  <Line yAxisId="right" type="monotone" dataKey="speed" stroke="#f97316" strokeWidth={2} dot={{ fill: '#f97316', r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
-      {/* 3. BOTTOM ROW (3 EQUAL COLUMNS) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        
-        {/* Column 1: Lane-wise Vehicle Count */}
-        <div className="itms-card p-4 flex flex-col justify-between">
-          <div className="flex items-center space-x-2 mb-3">
-            <span className="w-1 h-4 rounded-full bg-orange-500 inline-block" />
-            <h3 className="text-sm font-bold text-white tracking-tight">Lane-wise Vehicle Count</h3>
-          </div>
-
-          <div className="h-44 w-full mt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={laneData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-                <XAxis dataKey="lane" stroke="#475569" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis stroke="#475569" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} domain={[0, 60]} />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]} label={{ position: 'top', fill: '#e2e8f0', fontSize: 11, fontWeight: 'bold' }}>
-                  {laneData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Column 2: Recent Events / Alerts */}
-        <div className="itms-card p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-2">
-              <span className="w-1 h-4 rounded-full bg-orange-500 inline-block" />
-              <h3 className="text-sm font-bold text-white tracking-tight">Recent Events / Alerts</h3>
-            </div>
-            <button 
-              onClick={() => onSelectView('alerts')}
-              className="text-xs text-cyan-400 hover:text-cyan-300 font-medium flex items-center space-x-1"
-            >
-              <span>View All</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="space-y-2.5 flex-1 overflow-y-auto">
-            {recentAlerts.map((alert) => (
-              <div 
-                key={alert.id} 
-                className="p-2.5 rounded-lg bg-[#0c1624] border border-[#18293d] flex items-center justify-between hover:border-slate-700 transition"
-              >
-                <div className="flex items-center space-x-3">
-                  {alert.type === 'warning' ? (
-                    <div className="p-1.5 rounded-lg bg-orange-500/10 text-orange-400 shrink-0">
-                      <AlertTriangle className="w-4 h-4" />
-                    </div>
-                  ) : (
-                    <div className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 shrink-0">
-                      <Info className="w-4 h-4" />
-                    </div>
-                  )}
-                  <div>
-                    <h4 className="text-xs font-semibold text-slate-200 leading-tight">{alert.title}</h4>
-                    <p className="text-[10px] text-slate-400 leading-tight">{alert.subtitle}</p>
-                  </div>
-                </div>
-                <span className="text-[10px] font-mono text-slate-400 shrink-0">{alert.time}</span>
-              </div>
             ))}
           </div>
         </div>
 
-        {/* Column 3: Live Vehicle Tracking Table */}
-        <div className="itms-card p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-2">
-              <span className="w-1 h-4 rounded-full bg-orange-500 inline-block" />
-              <h3 className="text-sm font-bold text-white tracking-tight">Live Vehicle Tracking</h3>
-            </div>
-            <button 
-              onClick={() => onSelectView('vehicle-tracking')}
-              className="text-xs text-cyan-400 hover:text-cyan-300 font-medium flex items-center space-x-1"
-            >
-              <span>View All</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+        {/* Mechanisms Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredMechanisms.map((item) => {
+            const IconComponent = item.icon;
+            return (
+              <div 
+                key={item.id}
+                className="rounded-2xl border border-[#192c43] bg-[#0c1624] p-5 flex flex-col justify-between hover:border-slate-600 transition group hover:shadow-xl shadow-slate-950/50"
+              >
+                <div className="space-y-4">
+                  {/* Card Header */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-2.5 rounded-xl border ${item.badgeColor}`}>
+                        <IconComponent className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-white group-hover:text-orange-400 transition-colors">
+                          {item.name}
+                        </h3>
+                        <p className="text-[11px] text-slate-400 font-medium">
+                          {item.subtitle}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-          <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left text-xs">
-              <thead className="text-[10px] text-slate-400 border-b border-[#18293d] uppercase font-mono">
-                <tr>
-                  <th className="pb-2 font-medium">ID</th>
-                  <th className="pb-2 font-medium">Type</th>
-                  <th className="pb-2 font-medium">Lane</th>
-                  <th className="pb-2 font-medium">Speed (km/h)</th>
-                  <th className="pb-2 font-medium">Direction</th>
-                  <th className="pb-2 font-medium text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#142336] text-slate-300 text-[11px]">
-                {vehicleTrackingRows.map((row) => (
-                  <tr key={row.id} className="hover:bg-[#122135] transition">
-                    <td className="py-1.5 font-mono text-slate-400">{row.id}</td>
-                    <td className="py-1.5 font-medium">{row.type}</td>
-                    <td className="py-1.5 font-mono">{row.lane}</td>
-                    <td className="py-1.5 font-mono text-cyan-400">{row.speed}</td>
-                    <td className="py-1.5 text-slate-400">{row.direction}</td>
-                    <td className="py-1.5 text-right">
-                      <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold ${
-                        row.status === 'Alert'
-                          ? 'bg-orange-500 text-white'
-                          : 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                      }`}>
-                        {row.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  {/* Description */}
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    {item.description}
+                  </p>
+
+                  {/* Highlights Bullet Points */}
+                  <div className="space-y-1.5 pt-1">
+                    {item.highlights.map((h, i) => (
+                      <div key={i} className="flex items-start space-x-2 text-[11px] text-slate-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1 shrink-0" />
+                        <span className="leading-snug">{h}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tech Specs Footer */}
+                <div className="mt-5 pt-3 border-t border-[#162536] flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                  <span className="truncate">{item.techSpecs}</span>
+                  <span className="text-orange-400/80 uppercase font-semibold shrink-0 ml-2">Active</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
+      </section>
 
-      </div>
+      {/* 3. GO TO VIDEO ANALYSIS WORKSPACE CTA SECTION */}
+      <section className="relative overflow-hidden rounded-2xl border border-[#1e3450] bg-gradient-to-r from-[#0d1c2d] via-[#0e1726] to-[#121c2b] p-8 md:p-10 shadow-2xl">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex items-center space-x-2 text-xs font-semibold text-orange-400">
+              <Sparkles className="w-4 h-4" />
+              <span>Live AI Inference Engine</span>
+            </div>
+            <h2 className="text-xl md:text-2xl font-extrabold text-white tracking-tight">
+              Ready to Analyze Traffic Surveillance Footage?
+            </h2>
+            <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
+              Launch the dedicated Video Analysis Workspace to upload video recordings, connect live RTSP/Webcam feeds, fine-tune confidence & calibration parameters, and monitor live telemetry with synchronized overlays.
+            </p>
+          </div>
+
+          <button
+            onClick={() => onSelectView('video-analysis')}
+            className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-sm font-bold flex items-center space-x-2.5 shadow-xl shadow-orange-500/25 transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer shrink-0"
+          >
+            <Video className="w-5 h-5" />
+            <span>Go to Video Analysis Workspace</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      </section>
 
     </div>
   );
 };
-

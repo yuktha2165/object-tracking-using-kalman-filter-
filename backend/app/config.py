@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     # Object Detection Model Hardware & Optimizations
     RTDETR_MODEL: str = "rtdetr-l.pt"
     YOLO_MODEL: str = "rtdetr-l.pt"
-    CONFIDENCE_THRESHOLD: float = 0.35
+    CONFIDENCE_THRESHOLD: float = 0.45
     IOU_THRESHOLD: float = 0.45
     DEVICE: str = "auto"  # "auto", "cuda", "mps", "cpu"
     HALF_PRECISION: bool = True
@@ -22,9 +22,9 @@ class Settings(BaseSettings):
     CUSTOM_MODEL_PATH: Optional[str] = None
 
     # Tracking
-    MAX_MISSED_FRAMES: int = 30
-    MAX_ASSOCIATION_DISTANCE: float = 120.0
-    MAX_TRAJECTORY_POINTS: int = 50
+    MAX_MISSED_FRAMES: int = 15
+    MAX_ASSOCIATION_DISTANCE: float = 90.0
+    MAX_TRAJECTORY_POINTS: int = 30
     
     # Fast Processing & Keyframe Batching
     DETECTION_INTERVAL: int = 1  # Configurable: 1, 2, 3, 5
