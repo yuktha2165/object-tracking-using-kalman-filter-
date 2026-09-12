@@ -1,0 +1,36 @@
+# Python & Virtual environments
+backend/venv/
+backend/env/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Large Model weights & Runs
+*.pt
+*.pth
+*.onnx
+runs/
+backend/models/*.pt
+
+# Temporary & Output Files
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/outputs/*
+!backend/outputs/.gitkeep
+backend/sample_videos/*
+!backend/sample_videos/.gitkeep
+
+# Node & Frontend Build
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
+frontend/build/
+
+# IDE & OS files
+.DS_Store
+.vscode/
+.idea/
+*.log

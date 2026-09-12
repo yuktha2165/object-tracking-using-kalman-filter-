@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-100 font-sans antialiased selection:bg-orange-500/30 selection:text-orange-200;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #0a111a;
+}
+::-webkit-scrollbar-thumb {
+  background: #192c43;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #254060;
+}
+
+.itms-card {
+  background-color: #0f1c2d;
+  border: 1px solid #192c43;
+  border-radius: 0.75rem;
+}
+
+.itms-card-hover {
+  transition: all 0.2s ease-in-out;
+}
+.itms-card-hover:hover {
+  border-color: #254060;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+}
+
+/* Range input customization for video slider */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f97316;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.6);
+}
+
+.glass-panel {
+  background: rgba(15, 28, 45, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid #192c43;
+}
+
+.pulse-glowing {
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(249, 115, 22, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(249, 115, 22, 0.6);
+  }
+}
+
